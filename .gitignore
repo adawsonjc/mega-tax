@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+.pnpm-store/
+# build output
+dist/
+# tooling
+.vite/
+.env
+.env.*
+.DS_Store
+*.log
+# editors/hosting (optional)
+.vscode/
+.idea/
+.vercel/
