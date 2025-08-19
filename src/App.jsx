@@ -264,7 +264,7 @@ export default function App() {
             <button
               onClick={() => setShowDonate(true)}
               aria-label="Open donate options"
-              className="ml-2 px-3 py-2 rounded-xl text-sm border bg-neutral-900 text-white border-neutral-900 hover:opacity-90"
+              className="ml-2 px-3 py-2 rounded-xl text-sm !bg-black !text-white !border !border-black hover:!bg-black focus:!ring-2 focus:!ring-black"
             >
               Donate now
             </button>
@@ -553,7 +553,7 @@ export default function App() {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <button onClick={() => setShowDonate(true)} className="px-4 py-2 rounded-xl text-sm border bg-neutral-900 text-white border-neutral-900">Donate now</button>
+            <button onClick={() => setShowDonate(true)} className="px-4 py-2 rounded-xl text-sm border bg-black text-white border-neutral-900">Donate now</button>
           </div>
         </SectionCard>
 
