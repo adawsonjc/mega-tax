@@ -6,7 +6,7 @@ import React, { useMemo, useState } from "react";
 // • Move the full "How we worked this out" explainer to the LOWER Suggested Annual Contribution card only.
 // • Remove the explainer from everywhere else.
 // • Move Policy note to the bottom of the page.
-// • Keep prior structure: sliders BEFORE calculator; LVT adjustable (default 1.6%);
+// • Keep prior structure: sliders BEFORE calculator; LVT adjustable (default 0.9%);
 //   donation section separate; simple clean style.
 
 // ------------------ utils ------------------
@@ -68,8 +68,8 @@ export default function App() {
   const [landShare, setLandShare] = useState(0.5); // 50% of property treated as land by default
   const [landPreset, setLandPreset] = useState("balanced");
 
-  // LVT rate — adjustable (default 1.6%)
-  const [lvtRate, setLvtRate] = useState(0.016);
+  // LVT rate — adjustable (default 0.9%)
+  const [lvtRate, setLvtRate] = useState(0.009);
 
   // Gift Aid + giving preferences
   const [useGiftAid, setUseGiftAid] = useState(true);
@@ -171,8 +171,8 @@ export default function App() {
     const bracketAmounts = spans.map(x => ({ ...x, amount: x.span * x.rate * k }));
     const baseWealthTithe = bracketAmounts.reduce((s, x) => s + x.amount, 0);
 
-    // LVT: property × landShare − £1m allowance, × LVT rate
-    const siteValue = Math.max(0, propertyValue * landShare - 1_000_000);
+    // LVT: property × landShare − £100,000 allowance, × LVT rate
+    const siteValue = Math.max(0, propertyValue * landShare - 100_000);
     const lvtProxy = siteValue * lvtRate * k;
 
     const total = Math.max(0, baseWealthTithe) + Math.max(0, lvtProxy);
@@ -339,7 +339,7 @@ export default function App() {
                   </li>
                   <li>
                     Land value (proxy): <span className="font-medium">{currency(calc.lvtProxy)}</span>{" "}
-                    <Info text={`We estimate site value as (property × land‑share − £1m) × LVT rate. LVT is currently ${pct(lvtRate)} and adjustable below.`} />
+                    <Info text={`We estimate site value as (property × land‑share − £100,000) × LVT rate. LVT is currently ${pct(lvtRate)} and adjustable below.`} />
                   </li>
                 </ul>
               </div>
@@ -378,7 +378,7 @@ export default function App() {
             <label className="block">
               <div className="text-sm text-neutral-700 font-medium">
                 Land Value Tax (LVT) rate
-                <Info text="Percentage applied to estimated site value (after £1m allowance)." />
+                <Info text="Percentage applied to estimated site value (after £100,000 allowance)." />
               </div>
               <div className="flex items-center gap-4 mt-2">
                 <input
@@ -395,7 +395,7 @@ export default function App() {
                 </div>
               </div>
               <p className="mt-1 text-xs text-neutral-600">
-                Default is <span className="font-medium">1.6%</span>. LVT replaces Stamp Duty and Council Tax in this model.
+                Default is <span className="font-medium">0.9%</span>. LVT replaces Stamp Duty and Council Tax in this model.
               </p>
             </label>
           </div>
@@ -500,7 +500,7 @@ export default function App() {
                     ) : null)}
                   </ul>
                 </li>
-                <li>Estimate site value for LVT: <span className="font-medium">{currency(propertyValue)} × {pct(landShare)} − £1m</span> = <span className="font-medium">{currency(calc.siteValue)}</span></li>
+                <li>Estimate site value for LVT: <span className="font-medium">{currency(propertyValue)} × {pct(landShare)} − £100,000</span> = <span className="font-medium">{currency(calc.siteValue)}</span></li>
                 <li>LVT on site value at {pct(lvtRate,1)}: <span className="font-medium">{currency(calc.lvtProxy)}</span></li>
                 <li>Suggested annual contribution = wealth tithe + LVT</li>
               </ol>
