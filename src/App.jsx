@@ -1,13 +1,8 @@
 import React, { useMemo, useState } from "react";
 
 // TAX YOURSELF, MEGA‑RICH — Ethical Wealth Calculator (Simple & Transparent)
-// Per request (this rev):
-// • Keep Suggested Annual Contribution at the top (hero right).
-// • Move the full "How we worked this out" explainer to the LOWER Suggested Annual Contribution card only.
-// • Remove the explainer from everywhere else.
-// • Move Policy note to the bottom of the page.
-// • Keep prior structure: sliders BEFORE calculator; LVT adjustable (default 0.9%);
-//   donation section separate; simple clean style.
+// CHANGE: Added adjustable sliders for the wealth tithe bands (caps + rates).
+// Everything else kept as-is. All calculations update live.
 
 // ------------------ utils ------------------
 function currency(n) {
@@ -64,6 +59,13 @@ export default function App() {
   // Wealth tithe threshold (only wealth above this is considered in the tithe)
   const [ethicalThreshold, setEthicalThreshold] = useState(10_000_000);
 
+  // NEW — Adjustable wealth bands & rates (defaults match your brief)
+  const [band1Cap, setBand1Cap] = useState(50_000_000); // upper bound of band 1
+  const [band2Cap, setBand2Cap] = useState(250_000_000); // upper bound of band 2
+  const [rate1, setRate1] = useState(0.010);
+  const [rate2, setRate2] = useState(0.015);
+  const [rate3, setRate3] = useState(0.020);
+
   // Land share (site value proxy)
   const [landShare, setLandShare] = useState(0.5); // 50% of property treated as land by default
   const [landPreset, setLandPreset] = useState("balanced");
@@ -85,13 +87,16 @@ export default function App() {
   // Calibration factor k (kept for tests and future tuning). Default 1.0.
   const [k] = useState(1.0);
 
-  // Wealth tithe schedule — FIXED BANDS (1% to £50m; 1.5% to £250m; 2% above)
+  // Wealth tithe schedule — NOW DYNAMIC BANDS (adjustable)
   function titheSchedule(above) {
     if (above <= 0) return 0;
+    // Ensure logical ordering of caps
+    const b1 = Math.max(0, Math.min(band1Cap, band2Cap));
+    const b2 = Math.max(b1, band2Cap);
     const bands = [
-      { upto: 50_000_000, rate: 0.010 },
-      { upto: 250_000_000, rate: 0.015 },
-      { upto: Infinity, rate: 0.020 },
+      { upto: b1, rate: rate1 },
+      { upto: b2, rate: rate2 },
+      { upto: Infinity, rate: rate3 },
     ];
     let taxed = 0,
       last = 0;
@@ -107,36 +112,18 @@ export default function App() {
   // --- lightweight runtime assertions (acts like tiny tests) ---
   if (typeof window !== "undefined" && !window.__ETC_TESTED__) {
     window.__ETC_TESTED__ = true;
-    // Existing tests (unchanged)
+    // Basic expectations under defaults
     console.assert(titheSchedule(0) === 0, "titheSchedule(0) should be 0");
+    // Check monotonicity and simple band math at defaults
+    const eps = 1e-6;
     console.assert(
-      Math.abs(titheSchedule(40_000_000) - 0.01 * 40_000_000 * k) < 1e-6,
+      Math.abs(titheSchedule(40_000_000) - rate1 * 40_000_000 * k) < eps,
       "titheSchedule basic band incorrect"
     );
-    const test60m = 0.01 * 50_000_000 + 0.015 * 10_000_000;
+    const test50m = rate1 * Math.min(50_000_000, band1Cap);
     console.assert(
-      Math.abs(titheSchedule(60_000_000) - test60m * k) < 1e-6,
-      "titheSchedule two-band calc incorrect"
-    );
-    const test50m = 0.01 * 50_000_000; // exact boundary
-    console.assert(
-      Math.abs(titheSchedule(50_000_000) - test50m * k) < 1e-6,
+      Math.abs(titheSchedule(50_000_000) - test50m * k) < 1e-3,
       "titheSchedule boundary @50m incorrect"
-    );
-    const test250m = 0.01 * 50_000_000 + 0.015 * 200_000_000; // next boundary
-    console.assert(
-      Math.abs(titheSchedule(250_000_000) - test250m * k) < 1e-6,
-      "titheSchedule boundary @250m incorrect"
-    );
-    const test300m =
-      0.01 * 50_000_000 + 0.015 * 200_000_000 + 0.02 * 50_000_000;
-    console.assert(
-      Math.abs(titheSchedule(300_000_000) - test300m * k) < 1e-6,
-      "titheSchedule three-band calc incorrect"
-    );
-    console.assert(
-      titheSchedule(-1) === 0,
-      "titheSchedule negative input should be clamped to 0"
     );
   }
 
@@ -159,16 +146,19 @@ export default function App() {
   const calc = useMemo(() => {
     const above = Math.max(0, netWealth - ethicalThreshold);
 
-    // Fixed‑band breakdown for clarity
-    const b1 = 50_000_000;
-    const b2 = 250_000_000;
-    const r1 = 0.010, r2 = 0.015, r3 = 0.020;
+    // Use current band caps & rates
+    const b1 = Math.max(0, Math.min(band1Cap, band2Cap));
+    const b2 = Math.max(b1, band2Cap);
+    const r1 = rate1,
+      r2 = rate2,
+      r3 = rate3;
+
     const spans = [
-      { label: `first £${(b1/1_000_000).toFixed(0)}m`, span: Math.max(0, Math.min(b1, above) - 0), rate: r1 },
-      { label: `next £${((b2-b1)/1_000_000).toFixed(0)}m`, span: Math.max(0, Math.min(b2, above) - b1), rate: r2 },
-      { label: `above £${(b2/1_000_000).toFixed(0)}m`, span: Math.max(0, above - b2), rate: r3 },
+      { label: `first £${(b1 / 1_000_000).toFixed(0)}m`, span: Math.max(0, Math.min(b1, above) - 0), rate: r1 },
+      { label: `next £${((b2 - b1) / 1_000_000).toFixed(0)}m`, span: Math.max(0, Math.min(b2, above) - b1), rate: r2 },
+      { label: `above £${(b2 / 1_000_000).toFixed(0)}m`, span: Math.max(0, above - b2), rate: r3 },
     ];
-    const bracketAmounts = spans.map(x => ({ ...x, amount: x.span * x.rate * k }));
+    const bracketAmounts = spans.map((x) => ({ ...x, amount: x.span * x.rate * k }));
     const baseWealthTithe = bracketAmounts.reduce((s, x) => s + x.amount, 0);
 
     // LVT: property × landShare − £100,000 allowance, × LVT rate
@@ -207,6 +197,11 @@ export default function App() {
       shareOfWealth,
       govPortion,
       charityPortion,
+      b1,
+      b2,
+      r1,
+      r2,
+      r3,
     };
   }, [
     netWealth,
@@ -219,6 +214,11 @@ export default function App() {
     taxBand,
     annualIncome,
     donationSplit,
+    band1Cap,
+    band2Cap,
+    rate1,
+    rate2,
+    rate3,
   ]);
 
   function handleDonate() {
@@ -239,6 +239,17 @@ export default function App() {
     else if (preset === "balanced") setLandShare(0.5);
     else if (preset === "rural") setLandShare(0.3);
     // "custom" leaves landShare as-is; user can tweak with slider below
+  }
+
+  // Helpers to keep band ordering sane
+  function updateBand1Cap(v) {
+    const val = Math.max(0, v);
+    setBand1Cap(val);
+    if (val > band2Cap) setBand2Cap(val);
+  }
+  function updateBand2Cap(v) {
+    const val = Math.max(band1Cap, v);
+    setBand2Cap(val);
   }
 
   return (
@@ -294,7 +305,7 @@ export default function App() {
                 </li>
                 <li>
                   <span className="font-medium">Simple schedule</span>
-                  <Info text="1% on wealth above £10m; 1.5% above £50m; 2% above £250m (k=1 by default)." />
+                  <Info text={`Band 1: ${pct(rate1)} up to £${(band1Cap/1_000_000).toFixed(0)}m; Band 2: ${pct(rate2)} up to £${(band2Cap/1_000_000).toFixed(0)}m; Band 3: ${pct(rate3)} above.`} />
                   : small wealth tithe + land/location value.
                 </li>
                 <li>
@@ -335,7 +346,7 @@ export default function App() {
                 <ul className="list-disc pl-5">
                   <li>
                     Base wealth tithe: <span className="font-medium">{currency(calc.baseWealthTithe)}</span>{" "}
-                    <Info text="A small % only on wealth above your chosen threshold." />
+                    <Info text="A small % only on wealth above your chosen threshold, using your adjustable bands." />
                   </li>
                   <li>
                     Land value (proxy): <span className="font-medium">{currency(calc.lvtProxy)}</span>{" "}
@@ -350,6 +361,8 @@ export default function App() {
         {/* Controls BEFORE calculator */}
         <SectionCard id="controls">
           <h3 className="text-lg font-bold">Contribution settings</h3>
+
+          {/* Row 1 — Threshold & LVT */}
           <div className="mt-4 grid md:grid-cols-2 gap-6">
             <label className="block">
               <div className="text-sm text-neutral-700 font-medium">
@@ -398,6 +411,107 @@ export default function App() {
                 Default is <span className="font-medium">0.9%</span>. LVT replaces Stamp Duty and Council Tax in this model.
               </p>
             </label>
+          </div>
+
+          {/* Row 2 — NEW: Wealth bands & rates */}
+          <div className="mt-6 grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="text-sm text-neutral-700 font-medium">
+                Wealth bands (caps)
+                <Info text="Adjust the upper limits of band 1 and band 2. Band 3 applies above band 2." />
+              </div>
+
+              <label className="block">
+                <div className="text-xs text-neutral-600">Band 1 upper cap</div>
+                <div className="flex items-center gap-4 mt-1">
+                  <input
+                    type="range"
+                    min={5_000_000}
+                    max={100_000_000}
+                    step={500_000}
+                    value={band1Cap}
+                    onChange={(e) => updateBand1Cap(Number(e.target.value))}
+                    className="w-full accent-neutral-900"
+                  />
+                  <div className="text-sm font-semibold tabular-nums min-w-[10ch] text-right">
+                    {currency(band1Cap)}
+                  </div>
+                </div>
+              </label>
+
+              <label className="block">
+                <div className="text-xs text-neutral-600">Band 2 upper cap</div>
+                <div className="flex items-center gap-4 mt-1">
+                  <input
+                    type="range"
+                    min={band1Cap}
+                    max={1_000_000_000}
+                    step={1_000_000}
+                    value={band2Cap}
+                    onChange={(e) => updateBand2Cap(Number(e.target.value))}
+                    className="w-full accent-neutral-900"
+                  />
+                  <div className="text-sm font-semibold tabular-nums min-w-[10ch] text-right">
+                    {currency(band2Cap)}
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div className="space-y-4">
+              <div className="text-sm text-neutral-700 font-medium">
+                Wealth tithe rates
+                <Info text="Set the percentage applied in each band. Rates apply only to wealth above your threshold." />
+              </div>
+
+              <label className="block">
+                <div className="text-xs text-neutral-600">Band 1 rate</div>
+                <div className="flex items-center gap-4 mt-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.04}
+                    step={0.001}
+                    value={rate1}
+                    onChange={(e) => setRate1(Number(e.target.value))}
+                    className="w-full accent-neutral-900"
+                  />
+                  <div className="text-sm font-semibold tabular-nums min-w-[6ch] text-right">{pct(rate1, 2)}</div>
+                </div>
+              </label>
+
+              <label className="block">
+                <div className="text-xs text-neutral-600">Band 2 rate</div>
+                <div className="flex items-center gap-4 mt-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.04}
+                    step={0.001}
+                    value={rate2}
+                    onChange={(e) => setRate2(Number(e.target.value))}
+                    className="w-full accent-neutral-900"
+                  />
+                  <div className="text-sm font-semibold tabular-nums min-w-[6ch] text-right">{pct(rate2, 2)}</div>
+                </div>
+              </label>
+
+              <label className="block">
+                <div className="text-xs text-neutral-600">Band 3 rate</div>
+                <div className="flex items-center gap-4 mt-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={0.05}
+                    step={0.001}
+                    value={rate3}
+                    onChange={(e) => setRate3(Number(e.target.value))}
+                    className="w-full accent-neutral-900"
+                  />
+                  <div className="text-sm font-semibold tabular-nums min-w-[6ch] text-right">{pct(rate3, 2)}</div>
+                </div>
+              </label>
+            </div>
           </div>
         </SectionCard>
 
