@@ -316,12 +316,6 @@ export default function App() {
               </ul>
               <div className="mt-4 flex gap-2">
                 <a
-                  href="#controls"
-                  className="px-4 py-2 rounded-xl text-sm border bg-white text-neutral-800 border-neutral-200 hover:border-neutral-300"
-                >
-                  Set sliders
-                </a>
-                <a
                   href="#calc"
                   className="px-4 py-2 rounded-xl text-sm border bg-neutral-900 text-white border-neutral-900 hover:opacity-90"
                 >
